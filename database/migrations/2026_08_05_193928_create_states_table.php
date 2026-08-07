@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ca_states', function (Blueprint $table) {
+        Schema::create('estados', function (Blueprint $table) {
 
             $table->id();
             $table->char('cve_ent', 2)->unique();

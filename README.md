@@ -10,7 +10,7 @@ Este repositorio contiene el backend y frontend necesarios para ejecutar la apli
 
 Antes de comenzar, asegúrate de contar con lo siguiente instalado en tu equipo:
 
-- PHP 8.1 - 8.2
+- PHP >= 8.2
 - Composer
 - Node.js y npm
 - MySQL activo
@@ -22,7 +22,7 @@ Antes de comenzar, asegúrate de contar con lo siguiente instalado en tu equipo:
 ### 1️⃣ Clonar el repositorio
 
 ```bash
-git clone https://github.com/tu-usuario/tu-repositorio.git
+git clone https://github.com/ManuelCobian/prueba-tecnica.git
 cd tu-repositorio
 
 
@@ -33,7 +33,7 @@ npm run build
 
 3️⃣ Archivo .env
 
-APP_NAME=Repsa
+APP_NAME="ENEGENCE Prueba Técnica"
 APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://localhost
@@ -47,7 +47,7 @@ php artisan key:generate
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=repsa_app
+DB_DATABASE=enegence_test
 DB_USERNAME=root
 DB_PASSWORD=
 

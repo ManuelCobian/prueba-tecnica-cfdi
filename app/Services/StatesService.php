@@ -3,8 +3,6 @@
 namespace App\Services;
 
 use App\Models\State;
-use App\Models\Status;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class StatesService
@@ -19,7 +17,6 @@ class StatesService
                     'cve_ent' => $data['cve_ent']
                 ],
                 [
-                    'cvegeo' => $data['cvegeo'],
                     'name' => $data['nomgeo'],
                     'abbreviation' => $data ['nom_abrev'],
                     'population_total' => $data['pob_total'],

@@ -9,7 +9,7 @@ class State extends Model
 {
     use HasFactory;
 
-    protected $table = "ca_states";
+    protected $table = "estados";
 
     public $timestamps = false;
 
@@ -22,9 +22,4 @@ class State extends Model
        'population_male',
        'inhabited_houses',  
     ];
-
-    public function scopeList($query = null)
-    {
-        return $query;
-    }
 }
