@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Services\StatesService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Illuminate\Support\Facades\Http;
 
 class InegiStatesTest extends TestCase
 {
@@ -54,24 +55,27 @@ class InegiStatesTest extends TestCase
         $this->assertDatabaseCount('estados', 1);
     }
 
-    public function test_importing_states_twice_is_idempotent(): void
+    public function test_states_are_imported_from_inegi(): void
     {
+        Http::fake([
+            '*' => Http::response([
+                'datos' => [
+                    [
+                        'cve_ent' => '01',
+                        'nomgeo' => 'Aguascalientes',
+                        'nom_abrev' => 'Ags.',
+                        'pob_total' => 1425607,
+                        'pob_femenina' => 728924,
+                        'pob_masculina' => 696683,
+                        'total_viviendas_habitadas' => 386671,
+                    ],
+                ],
+            ], 200),
+        ]);
+
         $service = app(StatesService::class);
 
-        $state = [
-            'cve_ent' => '01',
-            'nomgeo' => 'Aguascalientes',
-            'nom_abrev' => 'Ags.',
-            'pob_total' => 1425607,
-            'pob_femenina' => 728924,
-            'pob_masculina' => 696683,
-            'total_viviendas_habitadas' => 386671,
-        ];
-
-        $service->createState($state);
-        $service->createState($state);
-
-        $this->assertDatabaseCount('estados', 1);
+        $service->import();
 
         $this->assertDatabaseHas('estados', [
             'cve_ent' => '01',
