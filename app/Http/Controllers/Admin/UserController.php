@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreUserRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Spatie\Permission\Models\Role;
+use Illuminate\Support\Facades\Gate;
 
 class UserController extends BaseController
 {
@@ -16,7 +16,7 @@ class UserController extends BaseController
     public function index()
     {
         //
-
+        Gate::authorize('read_users');
         return view('admin.users.index');
     }
 
@@ -26,6 +26,7 @@ class UserController extends BaseController
     public function create()
     {
         //
+        Gate::authorize('create_users');
         $roles = Role::all();
         return view('admin.users.create', compact('roles'));
     }
@@ -65,7 +66,7 @@ class UserController extends BaseController
      */
     public function show(User $user)
     {
-        //
+        Gate::authorize('read_users');
         return view('admin.users.show');
     }
 
@@ -74,6 +75,7 @@ class UserController extends BaseController
      */
     public function edit(User $user)
     {
+        Gate::authorize('update_users');
         $roles = Role::all();
         
 
@@ -85,7 +87,7 @@ class UserController extends BaseController
      */
     public function update(Request $request, User $user)
     {
-        //
+        Gate::authorize('update_users');
        
         $data = $request->validate([
             'name' => 'required|string|max:255',
@@ -119,7 +121,7 @@ class UserController extends BaseController
      */
     public function destroy(User $user)
     {
-        //
+        Gate::authorize('update_users');
         $user->roles()->detach();
         $user->delete();
         session()->flash('swal', [

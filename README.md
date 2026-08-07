@@ -28,3 +28,11 @@ de Claves Geoestadísticas del INEGI.
 ## Demo
 
 https://develop.clintec.net
+
+## Credenciales SUPER USERS
+
+Usuario:
+adminaccount@gmail.com
+
+Contraseña:
+12345678
