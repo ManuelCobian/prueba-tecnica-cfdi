@@ -10,7 +10,7 @@ Este repositorio contiene el backend y frontend necesarios para ejecutar la apli
 
 Antes de comenzar, asegúrate de contar con lo siguiente instalado en tu equipo:
 
-- PHP compatible con Laravel
+- PHP 8.1 - 8.2
 - Composer
 - Node.js y npm
 - MySQL activo
