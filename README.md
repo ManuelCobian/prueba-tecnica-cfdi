@@ -36,3 +36,42 @@ adminaccount@gmail.com
 
 Contraseña:
 12345678
+
+## ⚙️ Instalación
+
+### 1️⃣ Clonar el repositorio
+
+```bash
+git clone https://github.com/ManuelCobian/prueba-tecnica
+cd tu-repositorio
+
+
+2️⃣ Instalar dependencias
+composer install
+npm install
+npm run build
+
+3️⃣ Archivo .env
+
+APP_NAME=ENEGENCE
+APP_ENV=local
+APP_DEBUG=true
+APP_URL=http://localhost
+APP_LOCALE=es
+
+4️⃣ Generar la clave de la aplicación
+php artisan key:generate
+
+ Configura tu conexión a MySQL en el archivo .env:
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=inegi
+DB_USERNAME=root
+DB_PASSWORD=
+
+Ejecuta las migraciones junto con los seeders:
+
+php artisan migrate --seed
+
