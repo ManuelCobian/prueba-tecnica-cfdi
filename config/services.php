@@ -39,4 +39,26 @@ return [
         'host' => env('INEGI_HOST', 'https://gaia.inegi.org.mx/wscatgeo/v2/mgee'),
     ],
 
+     'sat' => [
+            'namespace' => env(
+            'SAT_NAMESPACE',
+            'http://www.sat.gob.mx/cfd/4'
+        ),
+
+        'xsi_namespace' => env(
+            'SAT_XSI_NAMESPACE',
+            'http://www.w3.org/2001/XMLSchema-instance'
+        ),
+
+        'xsd' => env(
+            'SAT_XSD',
+            'https://www.sat.gob.mx/sitio_internet/cfd/4/cfdv40.xsd'
+        ),
+
+        'xsd_local' => env(
+            'SAT_XSD_LOCAL',
+            'resources/xsd/cfdv40.xsd'
+        ),
+    ],
+
 ];

@@ -9,6 +9,14 @@ return [
         'active' => 'admin.dashboard',
     ],
 
+    [
+        'type' => 'link',
+        'title' => 'Generar CFDI',
+        'icon' => 'fa-solid fa-file-invoice',
+        'route' => 'admin.cfdi.generate',
+        'active' => 'admin.cfdi.generate',
+    ],
+
       [
         'type' => 'header',
         'title' => 'Administración',

@@ -32,7 +32,7 @@ https://develop.clintec.net
 ## Credenciales SUPER USERS
 
 Usuario:
-adminaccount@gmail.com
+guestaccount@gmail.com
 
 Contraseña:
 12345678
