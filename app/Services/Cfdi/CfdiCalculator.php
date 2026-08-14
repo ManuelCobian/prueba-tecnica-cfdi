@@ -2,46 +2,67 @@
 
 namespace App\Services\Cfdi;
 
-class CfdiCalculator
+use App\Data\Cfdi\CfdiTotals;
+
+final class CfdiCalculator
 {
-    public function calculate(array $conceptos): array
+    private const SCALE = 6;
+
+    public function calculate(array $conceptos): CfdiTotals
     {
-        $subtotal = 0;
-        $totalImpuestos = 0;
-        $calculatedConcepts = [];
+        $subtotal = '0.000000';
+        $totalImpuestos = '0.000000';
+        $conceptosCalculados = [];
 
         foreach ($conceptos as $concepto) {
 
-            $cantidad = (float) $concepto['cantidad'];
-            $valorUnitario = (float) $concepto['valorUnitario'];
-            $tasaIva = (float) $concepto['iva'];
-
-            $importe = $cantidad * $valorUnitario;
+            $importe = bcmul(
+                (string) $concepto['cantidad'],
+                (string) $concepto['valorUnitario'],
+                self::SCALE
+            );
 
             $base = $importe;
 
-            $iva = $base * $tasaIva;
+            $importeIva = bcmul(
+                $base,
+                (string) $concepto['iva'],
+                self::SCALE
+            );
 
-            $subtotal += $importe;
-            $totalImpuestos += $iva;
+            $subtotal = bcadd(
+                $subtotal,
+                $importe,
+                self::SCALE
+            );
 
-            $calculatedConcepts[] = array_merge(
+            $totalImpuestos = bcadd(
+                $totalImpuestos,
+                $importeIva,
+                self::SCALE
+            );
+
+            $conceptosCalculados[] = array_merge(
                 $concepto,
                 [
                     'importe' => $importe,
                     'base' => $base,
-                    'importeIva' => $iva,
+                    'importeIva' => $importeIva,
                 ]
             );
         }
 
-        $total = $subtotal + $totalImpuestos;
+        $total = bcadd(
+            $subtotal,
+            $totalImpuestos,
+            self::SCALE
+        );
 
-        return [
-            'conceptos' => $calculatedConcepts,
-            'subtotal' => $subtotal,
-            'totalImpuestos' => $totalImpuestos,
-            'total' => $total,
-        ];
+        return new CfdiTotals(
+            subtotal: $subtotal,
+            transferredTaxes: $totalImpuestos,
+            total: $total,
+            concepts: $conceptosCalculados
+        );
     }
 }

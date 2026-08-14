@@ -2,12 +2,13 @@
 
 namespace App\Services\Cfdi;
 
+use App\Data\Cfdi\CfdiTotals;
 use DOMDocument;
 use DOMElement;
 
-class CfdiXmlGenerator
+final class CfdiXmlGenerator
 {
-    public function generate(array $data, array $calculated): DOMDocument
+    public function generate(array $data, CfdiTotals $totals): DOMDocument
     {
         $dom = new DOMDocument('1.0', 'UTF-8');
 
@@ -18,7 +19,6 @@ class CfdiXmlGenerator
         $xsiNamespace = config('services.sat.xsi_namespace');
         $xsd = config('services.sat.xsd');
 
-    
         $comprobante = $dom->createElementNS(
             $cfdiNamespace,
             'cfdi:Comprobante'
@@ -41,7 +41,7 @@ class CfdiXmlGenerator
         $this->addComprobanteAttributes(
             $comprobante,
             $data,
-            $calculated
+            $totals
         );
 
         $this->addEmisor(
@@ -61,14 +61,14 @@ class CfdiXmlGenerator
         $this->addConceptos(
             $dom,
             $comprobante,
-            $calculated['conceptos'],
+            $totals->concepts,
             $cfdiNamespace
         );
 
         $this->addGlobalTaxes(
             $dom,
             $comprobante,
-            $calculated,
+            $totals,
             $cfdiNamespace
         );
 
@@ -78,7 +78,7 @@ class CfdiXmlGenerator
     private function addComprobanteAttributes(
         DOMElement $comprobante,
         array $data,
-        array $calculated
+        CfdiTotals $totals
     ): void {
         $comprobanteData = $data['comprobante'];
 
@@ -102,6 +102,10 @@ class CfdiXmlGenerator
             now()->format('Y-m-d\TH:i:s')
         );
 
+        /*
+         * Valores simulados exclusivamente para esta prueba técnica.
+         * No representan un certificado o sello fiscal real.
+         */
         $comprobante->setAttribute(
             'Sello',
             $comprobanteData['sello']
@@ -127,9 +131,7 @@ class CfdiXmlGenerator
 
         $comprobante->setAttribute(
             'SubTotal',
-            $this->money(
-                $calculated['subtotal']
-            )
+            $this->money($totals->subtotal)
         );
 
         $comprobante->setAttribute(
@@ -144,9 +146,7 @@ class CfdiXmlGenerator
 
         $comprobante->setAttribute(
             'Total',
-            $this->money(
-                $calculated['total']
-            )
+            $this->money($totals->total)
         );
 
         $comprobante->setAttribute(
@@ -287,7 +287,7 @@ class CfdiXmlGenerator
             $data['claveUnidad']
         );
 
-        if (!empty($data['unidad'])) {
+        if (! empty($data['unidad'])) {
             $concepto->setAttribute(
                 'Unidad',
                 $data['unidad']
@@ -301,16 +301,12 @@ class CfdiXmlGenerator
 
         $concepto->setAttribute(
             'ValorUnitario',
-            $this->money(
-                $data['valorUnitario']
-            )
+            $this->money($data['valorUnitario'])
         );
 
         $concepto->setAttribute(
             'Importe',
-            $this->money(
-                $data['importe']
-            )
+            $this->money($data['importe'])
         );
 
         $concepto->setAttribute(
@@ -353,9 +349,7 @@ class CfdiXmlGenerator
 
         $traslado->setAttribute(
             'Base',
-            $this->money(
-                $data['base']
-            )
+            $this->money($data['base'])
         );
 
         $traslado->setAttribute(
@@ -370,38 +364,23 @@ class CfdiXmlGenerator
 
         $traslado->setAttribute(
             'TasaOCuota',
-            number_format(
-                (float) $data['iva'],
-                6,
-                '.',
-                ''
-            )
+            $this->rate($data['iva'])
         );
 
         $traslado->setAttribute(
             'Importe',
-            $this->money(
-                $data['importeIva']
-            )
+            $this->money($data['importeIva'])
         );
 
-        $traslados->appendChild(
-            $traslado
-        );
-
-        $impuestos->appendChild(
-            $traslados
-        );
-
-        $concepto->appendChild(
-            $impuestos
-        );
+        $traslados->appendChild($traslado);
+        $impuestos->appendChild($traslados);
+        $concepto->appendChild($impuestos);
     }
 
     private function addGlobalTaxes(
         DOMDocument $dom,
         DOMElement $comprobante,
-        array $calculated,
+        CfdiTotals $totals,
         string $cfdiNamespace
     ): void {
         $impuestos = $dom->createElementNS(
@@ -411,9 +390,7 @@ class CfdiXmlGenerator
 
         $impuestos->setAttribute(
             'TotalImpuestosTrasladados',
-            $this->money(
-                $calculated['totalImpuestos']
-            )
+            $this->money($totals->transferredTaxes)
         );
 
         $traslados = $dom->createElementNS(
@@ -428,9 +405,7 @@ class CfdiXmlGenerator
 
         $traslado->setAttribute(
             'Base',
-            $this->money(
-                $calculated['subtotal']
-            )
+            $this->money($totals->subtotal)
         );
 
         $traslado->setAttribute(
@@ -450,30 +425,29 @@ class CfdiXmlGenerator
 
         $traslado->setAttribute(
             'Importe',
-            $this->money(
-                $calculated['totalImpuestos']
-            )
+            $this->money($totals->transferredTaxes)
         );
 
-        $traslados->appendChild(
-            $traslado
-        );
-
-        $impuestos->appendChild(
-            $traslados
-        );
-
-        $comprobante->appendChild(
-            $impuestos
-        );
+        $traslados->appendChild($traslado);
+        $impuestos->appendChild($traslados);
+        $comprobante->appendChild($impuestos);
     }
 
-    private function money(
-        float|int|string $value
-    ): string {
+    private function money(string|int|float $value): string
+    {
         return number_format(
             (float) $value,
             2,
+            '.',
+            ''
+        );
+    }
+
+    private function rate(string|int|float $value): string
+    {
+        return number_format(
+            (float) $value,
+            6,
             '.',
             ''
         );
