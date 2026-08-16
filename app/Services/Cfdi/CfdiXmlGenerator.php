@@ -5,13 +5,16 @@ namespace App\Services\Cfdi;
 use App\Data\Cfdi\CfdiTotals;
 use DOMDocument;
 use DOMElement;
+use InvalidArgumentException;
 
 final class CfdiXmlGenerator
 {
+    private const MONEY_SCALE = 2;
+    private const TAX_SCALE = 6;
+
     public function generate(array $data, CfdiTotals $totals): DOMDocument
     {
         $dom = new DOMDocument('1.0', 'UTF-8');
-
         $dom->formatOutput = true;
         $dom->preserveWhiteSpace = false;
 
@@ -103,8 +106,8 @@ final class CfdiXmlGenerator
         );
 
         /*
-         * Valores simulados exclusivamente para esta prueba técnica.
-         * No representan un certificado o sello fiscal real.
+         * Valores simulados únicamente para la prueba técnica.
+         * No representan un certificado ni un sello fiscal real.
          */
         $comprobante->setAttribute(
             'Sello',
@@ -181,16 +184,8 @@ final class CfdiXmlGenerator
             'cfdi:Emisor'
         );
 
-        $emisor->setAttribute(
-            'Rfc',
-            $data['rfc']
-        );
-
-        $emisor->setAttribute(
-            'Nombre',
-            $data['nombre']
-        );
-
+        $emisor->setAttribute('Rfc', $data['rfc']);
+        $emisor->setAttribute('Nombre', $data['nombre']);
         $emisor->setAttribute(
             'RegimenFiscal',
             $data['regimenFiscal']
@@ -210,15 +205,8 @@ final class CfdiXmlGenerator
             'cfdi:Receptor'
         );
 
-        $receptor->setAttribute(
-            'Rfc',
-            $data['rfc']
-        );
-
-        $receptor->setAttribute(
-            'Nombre',
-            $data['nombre']
-        );
+        $receptor->setAttribute('Rfc', $data['rfc']);
+        $receptor->setAttribute('Nombre', $data['nombre']);
 
         $receptor->setAttribute(
             'DomicilioFiscalReceptor',
@@ -287,7 +275,7 @@ final class CfdiXmlGenerator
             $data['claveUnidad']
         );
 
-        if (! empty($data['unidad'])) {
+        if (!empty($data['unidad'])) {
             $concepto->setAttribute(
                 'Unidad',
                 $data['unidad']
@@ -349,7 +337,10 @@ final class CfdiXmlGenerator
 
         $traslado->setAttribute(
             'Base',
-            $this->money($data['base'])
+            $this->decimal(
+                $data['base'],
+                self::TAX_SCALE
+            )
         );
 
         $traslado->setAttribute(
@@ -369,7 +360,10 @@ final class CfdiXmlGenerator
 
         $traslado->setAttribute(
             'Importe',
-            $this->money($data['importeIva'])
+            $this->decimal(
+                $data['importeIva'],
+                self::TAX_SCALE
+            )
         );
 
         $traslados->appendChild($traslado);
@@ -383,6 +377,14 @@ final class CfdiXmlGenerator
         CfdiTotals $totals,
         string $cfdiNamespace
     ): void {
+        $taxGroups = $this->groupTransferredTaxes(
+            $totals->concepts
+        );
+
+        if ($taxGroups === []) {
+            return;
+        }
+
         $impuestos = $dom->createElementNS(
             $cfdiNamespace,
             'cfdi:Impuestos'
@@ -390,7 +392,9 @@ final class CfdiXmlGenerator
 
         $impuestos->setAttribute(
             'TotalImpuestosTrasladados',
-            $this->money($totals->transferredTaxes)
+            $this->money(
+                $totals->transferredTaxes
+            )
         );
 
         $traslados = $dom->createElementNS(
@@ -398,58 +402,140 @@ final class CfdiXmlGenerator
             'cfdi:Traslados'
         );
 
-        $traslado = $dom->createElementNS(
-            $cfdiNamespace,
-            'cfdi:Traslado'
-        );
+        foreach ($taxGroups as $taxGroup) {
+            $traslado = $dom->createElementNS(
+                $cfdiNamespace,
+                'cfdi:Traslado'
+            );
 
-        $traslado->setAttribute(
-            'Base',
-            $this->money($totals->subtotal)
-        );
+            $traslado->setAttribute(
+                'Base',
+                $this->money(
+                    $taxGroup['base']
+                )
+            );
 
-        $traslado->setAttribute(
-            'Impuesto',
-            '002'
-        );
+            $traslado->setAttribute(
+                'Impuesto',
+                '002'
+            );
 
-        $traslado->setAttribute(
-            'TipoFactor',
-            'Tasa'
-        );
+            $traslado->setAttribute(
+                'TipoFactor',
+                'Tasa'
+            );
 
-        $traslado->setAttribute(
-            'TasaOCuota',
-            '0.160000'
-        );
+            $traslado->setAttribute(
+                'TasaOCuota',
+                $this->rate(
+                    $taxGroup['rate']
+                )
+            );
 
-        $traslado->setAttribute(
-            'Importe',
-            $this->money($totals->transferredTaxes)
-        );
+            $traslado->setAttribute(
+                'Importe',
+                $this->money(
+                    $taxGroup['tax']
+                )
+            );
 
-        $traslados->appendChild($traslado);
+            $traslados->appendChild($traslado);
+        }
+
         $impuestos->appendChild($traslados);
         $comprobante->appendChild($impuestos);
     }
 
-    private function money(string|int|float $value): string
-    {
-        return number_format(
-            (float) $value,
-            2,
-            '.',
-            ''
+    private function groupTransferredTaxes(
+        array $concepts
+    ): array {
+        $groups = [];
+
+        foreach ($concepts as $concept) {
+            if (
+                ($concept['objetoImp'] ?? null)
+                !== '02'
+            ) {
+                continue;
+            }
+
+            $rate = $this->rate(
+                $concept['iva']
+            );
+
+            if (!isset($groups[$rate])) {
+                $groups[$rate] = [
+                    'rate' => $rate,
+                    'base' => '0.000000',
+                    'tax' => '0.000000',
+                ];
+            }
+
+            $groups[$rate]['base'] = bcadd(
+                $groups[$rate]['base'],
+                (string) $concept['base'],
+                self::TAX_SCALE
+            );
+
+            $groups[$rate]['tax'] = bcadd(
+                $groups[$rate]['tax'],
+                (string) $concept['importeIva'],
+                self::TAX_SCALE
+            );
+        }
+
+        return $groups;
+    }
+
+    private function money(
+        string|int|float $value
+    ): string {
+        return $this->decimal(
+            $value,
+            self::MONEY_SCALE
         );
     }
 
-    private function rate(string|int|float $value): string
-    {
-        return number_format(
-            (float) $value,
-            6,
-            '.',
-            ''
+    private function rate(
+        string|int|float $value
+    ): string {
+        return $this->decimal(
+            $value,
+            self::TAX_SCALE
+        );
+    }
+
+    private function decimal(
+        string|int|float $value,
+        int $scale
+    ): string {
+        $value = (string) $value;
+
+        if (
+            !preg_match(
+                '/^-?\d+(?:\.\d+)?$/',
+                $value
+            )
+        ) {
+            throw new InvalidArgumentException(
+                "El valor '{$value}' no es un decimal válido."
+            );
+        }
+
+        $half = $scale === 0
+            ? '0.5'
+            : '0.'
+                . str_repeat('0', $scale)
+                . '5';
+
+        if (str_starts_with($value, '-')) {
+            $half = '-' . $half;
+        }
+
+        return bcadd(
+            $value,
+            $half,
+            $scale
         );
     }
 }
